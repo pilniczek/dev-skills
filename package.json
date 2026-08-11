@@ -1,0 +1,13 @@
+{
+  "name": "dev-skills",
+  "description": "A collection of Claude skills for developer documentation and workflow tasks.",
+  "private": true,
+  "scripts": {
+    "install:skills": "npx skills experimental_install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pilniczek/dev-skills"
+  },
+  "license": "UNLICENSED"
+}

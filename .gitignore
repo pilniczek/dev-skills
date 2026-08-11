@@ -1,0 +1,13 @@
+# Local secrets — never commit
+.env
+.env.*
+
+# Local IDE / Claude Code state
+.claude/settings.local.json
+
+# Work report (work-report skill) — git add -f to commit it
+/WORK-REPORT.md
+
+# Snyk Agent Scan local outputs
+snyk-scan.json
+snyk-scan-output.txt

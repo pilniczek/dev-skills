@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "grill-with-docs": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
+      "computedHash": "eb0e91e84277283dc2b23ed544399e53afd6b5287e5b6929f25fe8aa608e164b"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "5ea13a6d9f0d4bb694405d79acd00cadec0d21bb138c4dd10fcf3c500cb835c2"
+    },
+    "snyk-fix": {
+      "source": "snyk/studio-recipes",
+      "sourceType": "github",
+      "skillPath": "command_directives/synchronous_remediation/skills/snyk-fix/SKILL.md",
+      "computedHash": "cb1d22d15a0c82fc15ca4abbf2426998d97aa5e9eeb5f1dfdfe818ed62a39c7b"
+    }
+  }
+}
