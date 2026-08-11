@@ -1,4 +1,4 @@
-# Build a purpose-built completion report instead of adopting existing solution
+# Build a purpose-built completion report instead of adopting an existing solution
 
 We wanted per-worktree work summaries that a reviewing agent or a fresh session can read
 instead of re-deriving intent from the diff.
@@ -13,17 +13,17 @@ entirely. It is standalone (not coupled to worktrees) because a work summary is 
 
 ### claude-sessions / a fork
 
-We evaluated [iannuttall/claude-sessions](https://github.com/iannuttall/claude-sessions) (1207★, 137
-forks) and its forks, and chose **not** to adopt it: it is archived, and its core model —
-a single global `.current-session` pointer, one active session per project — is the
-opposite of the many-parallel-worktrees model the report was built for. No fork is a live
-re-architecture (the most-starred has 3★ and only adds a `session-load` command). The need
-is validated but every implementation is dead.
+[iannuttall/claude-sessions](https://github.com/iannuttall/claude-sessions) (1207★, 137 forks) is
+**archived**, and its core model — a single global `.current-session` pointer, one active session
+per project — is the opposite of the many-parallel-worktrees model we needed. No fork is a live
+re-architecture (the most-starred has 3★ and only adds a `session-load` command). The need is
+validated but every implementation is dead.
 
 ### handoff skill
 
-We got inspiration from mattpocock's [handoff skill](https://github.com/mattpocock/skills/blob/main/skills/productivity/handoff/SKILL.md). Good fit for the lateral agent → agent hop, but it lands in OS temp dir, not worktree-scoped dir. It is a one-shot, so it does not give durable per-worktree
-records.
+mattpocock's [handoff skill](https://github.com/mattpocock/skills/blob/main/skills/productivity/handoff/SKILL.md)
+is a good fit for the lateral agent → agent hop, but it lands in the OS temp dir and is one-shot,
+so it leaves no durable per-worktree record.
 
-We ported its two portable content features (a "suggested skills" cue
-and secret-redaction discipline) into `/work-report` without adopting its storage or lifecycle model.
+We ported its two portable content features (a "suggested skills" cue and secret-redaction
+discipline) into `/work-report` without adopting its storage or lifecycle model.

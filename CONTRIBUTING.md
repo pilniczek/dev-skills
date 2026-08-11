@@ -1,8 +1,12 @@
 # Contributing to `dev-skills`
 
-Thanks for considering a contribution. This file covers the local setup needed to develop and release safely. For repo conventions and per-skill contract pins, see [AGENTS.md](AGENTS.md); to add a new skill, follow the [Adding a new skill](AGENTS.md#adding-a-new-skill) checklist.
+Thanks for considering a contribution. This file covers the local setup needed to develop and release safely. For repo conventions and per-skill contract pins, see [AGENTS.md](AGENTS.md).
 
 ---
+
+## Vendored dev-time skills
+
+After a fresh clone, run `npm run install:skills` to restore every vendored dev-time skill under `.agents/skills/` from [skills-lock.json](skills-lock.json). That command restores the whole set; to add or update a single skill instead, run `npx skills add` and commit the changed lockfile. Never edit a vendored copy in place, see [AGENTS.md](AGENTS.md).
 
 ## Pre-release security scan
 
@@ -15,26 +19,26 @@ Because every push to `master` is a release (see [AGENTS.md "Versioning & releas
 
 ### Each release
 
-Replace `<skill-name>` with the skill you changed (run once per changed skill).
-
-PowerShell:
+Load the token from `.env` — pick your shell:
 
 ```powershell
+# PowerShell
 $env:SNYK_TOKEN = (Get-Content .env | Where-Object { $_ -match '^SNYK_TOKEN=' }) -replace '^SNYK_TOKEN=',''
-uvx snyk-agent-scan@latest --skills .\skills\<skill-name>\SKILL.md
 ```
-
-cmd.exe:
 
 ```cmd
+:: cmd.exe
 for /f "tokens=1,* delims==" %i in (.env) do @if /i "%i"=="SNYK_TOKEN" set SNYK_TOKEN=%j
-uvx snyk-agent-scan@latest --skills .\skills\<skill-name>\SKILL.md
 ```
 
-bash / zsh:
+```bash
+# bash / zsh
+export SNYK_TOKEN=$(grep ^SNYK_TOKEN= .env | cut -d= -f2-)
+```
+
+Then scan, once per changed skill (Windows shells take `.\skills\<skill-name>\SKILL.md`):
 
 ```bash
-export SNYK_TOKEN=$(grep ^SNYK_TOKEN= .env | cut -d= -f2-)
 uvx snyk-agent-scan@latest --skills ./skills/<skill-name>/SKILL.md
 ```
 

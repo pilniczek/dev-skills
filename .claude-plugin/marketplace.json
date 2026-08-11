@@ -16,7 +16,7 @@
     },
     {
       "name": "work-report",
-      "description": "Writes WORK-REPORT.md — a standardized self-report of a session's work that a reviewer or a later session reads instead of re-deriving intent from the diff.",
+      "description": "Writes WORK-REPORT.md, a standardized self-report of a session's work that a reviewer or a later session reads instead of re-deriving intent from the diff.",
       "source": "./",
       "strict": false,
       "skills": [
