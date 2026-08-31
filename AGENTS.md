@@ -44,7 +44,7 @@ Each skill's own `AGENTS.md` lists what is unique to it. These four pins apply t
 
 Adding a skill should not require rethinking anything at the root:
 
-1. Create `skills/<name>/` with a `SKILL.md` (unique frontmatter `name`), a `README.md` (usage + install command), and an `AGENTS.md` for skill-specific pins.
+1. Create `skills/<name>/` with a `SKILL.md` (unique frontmatter `name`, plus `allowed-tools` if its body tells the model to run commands), a `README.md` (usage + install command), and an `AGENTS.md` for skill-specific pins.
 2. Link the new `AGENTS.md` from [Per-skill guidance](#per-skill-guidance) below.
 3. Add one entry to the Skills section of the root [README.md](README.md), matching the plugin description.
 4. Register the plugin in [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json): append `{ "name": "<name>", "description": "…", "source": "./", "strict": false, "skills": ["./skills/<name>"] }`. All plugins share `source: "./"`, the repo root; `skills` points at the folder holding `SKILL.md`. No `version` field, see below.

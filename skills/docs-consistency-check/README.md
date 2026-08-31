@@ -1,8 +1,8 @@
 # docs-consistency-check
 
-A Claude skill that audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, templates, plugin manifests, changelogs, installers) for drift: places where one file was updated and the related ones weren't, or where two files contradict each other.
+A Claude skill that audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, templates, manifests, changelogs, installers) for drift: places where one file was updated and the related ones weren't, or where two files contradict each other.
 
-It does not check code, verify external links, enforce formatting, or run in CI. There's no linting or AST work here; it's a Claude skill, not a shell command. For consistency inside actual code, use a different tool.
+It does not check code logic, verify external links, enforce formatting, or run in CI. Installers and manifests are read for the concepts they document, never analysed as programs - there's no linting or AST work here; it's a Claude skill, not a shell command. For consistency inside actual code, use a different tool.
 
 ## Install
 
@@ -36,7 +36,7 @@ Every finding is classified into one of four severity tiers:
 
 1. [Apply security guards, identify the file set](SKILL.md#step-1--apply-security-guards-then-identify-the-file-set): filter, then inventory
 2. [Load intentional variations](SKILL.md#step-2--load-intentional-variations): pre-marked findings, silently suppressed
-3. [Count heuristic](SKILL.md#step-3--count-heuristic-fast-first-pass): list-size mismatches, the highest-yield signal
+3. [Count heuristic](SKILL.md#step-3--count-heuristic-fast-first-pass): declared invariants first, the highest-yield signal, then list sizes
 4. [Build the concept inventory](SKILL.md#step-4--build-the-concept-inventory): shared vocabulary across files
 5. [Cross-reference and classify](SKILL.md#step-5--cross-reference-and-classify): apply the severity tiers
 6. [Report findings](SKILL.md#step-6--report-findings): numbered, ordered by severity

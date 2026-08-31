@@ -6,7 +6,7 @@ A collection of [Claude](https://claude.com/claude-code) skills for developer do
 
 ### [docs-consistency-check](skills/docs-consistency-check/README.md)
 
-Audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, manifests, changelogs) for cross-file drift.
+Audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, templates, manifests, changelogs, installers) for cross-file drift.
 
 ### [work-report](skills/work-report/README.md)
 

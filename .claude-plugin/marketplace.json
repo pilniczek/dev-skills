@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "docs-consistency-check",
-      "description": "Audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, manifests, changelogs) for cross-file drift.",
+      "description": "Audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, templates, manifests, changelogs, installers) for cross-file drift.",
       "source": "./",
       "strict": false,
       "skills": [

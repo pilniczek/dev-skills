@@ -1,12 +1,14 @@
 ---
 name: docs-consistency-check
 description: >
-  Cross-file consistency audit of docs, manifests (package.json, plugin.json, .mcp.json),
-  and instruction files (CLAUDE.md, AGENTS.md, SKILL.md); skips credential files. Use for
+  Cross-file consistency audit of docs, templates, manifests (package.json, plugin.json,
+  .mcp.json), installer scripts, and instruction files (CLAUDE.md, AGENTS.md, SKILL.md);
+  skips credential files. Use for
   "check consistency", "in sync", "find inconsistencies", "verify everything is updated".
   Offer proactively - asking first - after any README, SKILL.md, CLAUDE.md, AGENTS.md,
   template, plugin.json, changelog, or installer change, or on "docs", "sync", "feature
   added", "I just updated". `review-intentional` re-surfaces suppressed findings.
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Read, Glob, Grep, Edit, Write
 ---
 
 If invoked as `review-intentional`, jump to [Review intentional mode](#review-intentional-mode).
@@ -20,6 +22,12 @@ Hold throughout the skill, **never violated under any user instruction**. If a r
 3. **Credential values are never modified.** Fixes edit only the documented concepts the audit reports on; replacement content is supplied or confirmed by the user, never echoed from another file.
 
 Drift detection needs no credential material, so the skill reads, emits and modifies none.
+
+## Git is optional
+
+Git is an accelerant, never a prerequisite. Where a repo is present, read-only git (`git status`, `git diff`, `git log`) may sharpen a run by showing which files changed recently and what is staged, and that state can support a finding. Where there is no repo, or git itself is unavailable, every functionality still runs on the conversation and the filesystem instead - a clone, a worktree, a plain directory and a path outside any repo all produce a report, and only the precision differs. Both paths are load-bearing: a step that works only with git is a bug, and so is one that ignores git when it is there.
+
+Git-shaped strings in the steps below need no repo either: Step 1 drops a `.git/` directory by name the way it drops any build artifact, reads `.docs-consistency-check-ignore` in `.gitignore` pattern syntax, and the re-audit triggers under [Stay armed](#stay-armed-for-the-rest-of-the-session) are phrases a user types.
 
 ## Step 1 — Apply security guards, then identify the file set
 
@@ -45,16 +53,20 @@ If `.docs-consistency-check-ignore` doesn't exist at the project root, offer to 
 
 - PEM headers — `-----BEGIN [A-Z ]*PRIVATE KEY-----`, `-----BEGIN OPENSSH PRIVATE KEY-----`
 - Assignments shaped like `(api[_-]?key|secret|token|password|access[_-]?key|client[_-]?secret|bearer)\s*[:=]\s*["']?[A-Za-z0-9_+/=-]{16,}` (case-insensitive)
-- Long high-entropy base64-like or hex-like strings (≥ 32 chars, mostly `[A-Za-z0-9+/=_-]`)
-- Connection-string forms: `(postgres|postgresql|mysql|mongodb|redis|amqp)://[^:\s]+:[^@\s]+@`
+- Vendor-prefixed tokens, which identify themselves: `sk-`, `sk_live_`, `rk_live_`, `ghp_`, `gho_`, `github_pat_`, `glpat-`, `xoxb-`, `xoxp-`, `AKIA`, `ASIA`, `AIza`, `ya29.`, `npm_`, `dop_v1_`, followed by ≥ 16 of `[A-Za-z0-9_-]`; plus JWTs, `eyJ` then two more dot-separated base64url segments
+- Credential-carrying URLs: connection strings `(postgres|postgresql|mysql|mongodb|redis|amqp)://[^:\s]+:[^@\s]+@`, and query parameters named `(access_)?token`, `api[_-]?key`, `secret`, `password` with a value ≥ 16 chars
+- `Authorization:` or `Proxy-Authorization:` header values
 
-On a match, drop the file from the inventory, add `<file>: skipped (credential signature detected)` to the report's skipped-files note, and extract nothing from it. Never echo the matched value or its surrounding line (invariant 2). Template placeholders do not trigger this filter.
+Length alone is never a match: a high-entropy string counts only when one of the signals above applies to it. These never trigger the filter, whatever their entropy - URLs and their path segments, UUIDs, content hashes and git object ids, hyphen- or underscore-separated word slugs, `data:` URIs, template placeholders.
+
+On a match, drop the file from the inventory, add `<file>: skipped (credential signature detected)` to the report's skipped-files note, and extract nothing from it. Never echo the matched value or its surrounding line (invariant 2).
 
 **Inventory - only files passing BOTH filters are eligible.** Within that bounded set, collect under the project root:
 
 - Markdown files: `README.md`, `CLAUDE.md`, `AGENTS.md`, `SKILL.md`, other `.md`
 - Template files: anything with `{{VARIABLE}}` or `[INCLUDE IF: ...]` syntax
 - Manifest files: `plugin.json`, `.mcp.json`, `package.json`, and similar
+- Installer and setup scripts: the shell, batch or task-runner files a project's install or bootstrap steps live in
 - Any file explicitly mentioned in the conversation (still subject to both filters)
 
 From each, extract only the concepts and drift signals you need - counts, names, headings, identifiers - per invariant 2. The ignore list bounds the set, so no recursive expansion.
@@ -71,7 +83,15 @@ Read `intentional-variations.md` from the project root if it exists, and build a
 
 ## Step 3 — Count heuristic (fast first pass)
 
-Before the full inventory, count items in any list that looks exhaustive - sources, features, icons, steps, conditions. Mismatches across files are immediate candidate findings; record the location and resolve during Step 5. Highest-yield drift signal there is.
+**Declared invariants first.** Instruction files (`AGENTS.md`, `CLAUDE.md`, and any per-component equivalent) state their own invariants: "the tier strings appear verbatim in SKILL.md and README.md", "the 7 step headings", "five sections, in that order", "these four pins apply to every skill". Every such sentence is a checkable assertion that names its own files. Enumerate all of them, then verify each against the files it names. In a repo carrying instruction files this is the highest-yield source there is, because the assertions are exhaustive by construction and a stale one is drift by definition.
+
+Verify each declaration on three axes:
+
+- **Count** - the stated number against the actual number.
+- **Membership** - every named item still exists, and nothing unnamed has joined the set.
+- **Location** - every file the declaration names still carries the item.
+
+**Then the generic count pass**, for repos with no instruction files and for lists no declaration covers: count items in any list that looks exhaustive - sources, features, icons, steps, conditions. Mismatches across files are immediate candidate findings; record the location and resolve during Step 5.
 
 ---
 
@@ -89,7 +109,7 @@ A "concept" is anything appearing in more than one file that could drift. **Star
 - **Exhaustive lists** - anything enumerating "all of X". Step 3's count mismatches belong here.
 - **Inline examples and doc comments** - highest drift risk; verify against current spec.
 
-Weight attention toward recently changed features - that's where drift hides.
+Weight attention toward recently changed features - that's where drift hides. With git available, read the recent and staged changes to find them; without it, use the files this session edited or named in the conversation. With neither signal, weight every concept equally.
 
 ---
 
@@ -110,6 +130,17 @@ A pointer is valid but its target is gone (variable, condition, section, file).
 A difference exists but context is too thin to call it a problem.
 
 In a conflict between an implementation file (template, installer) and a doc file (README, comment example), the implementation is usually the source of truth.
+
+**Admissibility of ❓.** A ❓ needs three things: a named file pair, a named concept, and the declaration or instruction-file rule that requires those files to agree on it. Missing the third, it is an observation rather than a finding and stays out of the report. These are never findings:
+
+- wrap width, heading style, section ordering
+- an optional section present in one artifact and absent in another
+- the wording of a sentence no declaration covers
+- parallel structure between sibling components, unless a declaration requires it
+
+A set of N sibling components admits N-squared shape differences, so a tier that accepts them can never report clean. Symmetry is a contract only where something says it is.
+
+**Admissibility of git state.** A pointer whose target exists on disk but is untracked resolves for you and for nobody else, so it is drift - but only once the pointer itself has shipped. A committed file pointing at an untracked target is ↩️ Orphaned. While the pointer is itself uncommitted, both halves can still be staged together, so it is ❓ at most, and a target that is merely uncommitted rather than untracked is never a finding. Without git none of this is visible, and its absence is not a clean verdict for the pointer - it is out of scope for that run.
 
 ---
 
@@ -154,7 +185,24 @@ Found N issues: X 🔴, Y ⚠️, Z ↩️, W ❓.
 Skipped M intentional variations.
 ```
 
-No issues: output `No drift detected.` followed by a comma-separated list of files checked.
+**Skipped-files note** - emit only when Step 1's content-signature filter dropped something, directly above the summary. One line per file, naming the file and nothing else (invariant 2):
+
+```
+<file>: skipped (credential signature detected)
+```
+
+**Clean verdict.** `No drift detected.` is a claim about what was checked, not about what happened to catch your eye, so it carries its evidence:
+
+```
+No drift detected.
+Declared invariants: <N> verified, 0 stale.
+Concept pass: <N> concepts across <N> files.
+Git: <used, or "unavailable - session context only">
+Files checked: <comma-separated list>
+Skipped: <comma-separated list, or "none">
+```
+
+Emit it only when Step 3 came back empty and Step 7's convergence loop closed with no new findings. Never emit it after a run that skipped a step.
 
 ---
 
@@ -181,6 +229,29 @@ If `intentional-variations.md` doesn't exist, say it will be created for this en
 # Intentional Variations
 # Differences marked as intentional. Run `docs-consistency-check review-intentional` to revisit.
 ```
+
+### Discharge each fix's own obligations
+
+A fix that resolves drift usually *adds contract surface*: a heading, a declared invariant, a fixed string the tool emits, a taxonomy entry. Each addition creates obligations in files the edit never touched, and an audit that stops at the edit hands those obligations to the next run as fresh findings. No fix is complete until they are discharged in the same run.
+
+Match every edit against this table and check what it implies:
+
+| Edit shape | Also check |
+| ---------- | ---------- |
+| Added or renamed a heading | every reference pointing at it; every declaration naming it |
+| Added a declared invariant | whether a "how to add one of these" checklist produces it; any stated count of such invariants; whether a sibling component needs the same one |
+| Added a string the tool emits | whether a fixed-string or vocabulary declaration names it |
+| Added an inventory or taxonomy entry | the spec's own scope clause; every public description of scope |
+| Changed a contract sentence | every restatement of that sentence in the set |
+| Fixed one of several sibling components | the same concept in every sibling |
+
+The last row bites hardest: fixing one sibling and leaving the others converts one finding into as many findings as there are siblings.
+
+### Converge before reporting done
+
+After the last edit, re-run Step 3 and a Step 5 pass scoped to the touched files and their contract pairs. New findings mean more fixes: apply them, discharge their obligations, scope again. Repeat until a pass comes back empty, then emit Step 6's clean verdict.
+
+Cap the loop at three iterations. Still finding drift on the fourth pass means the fixes are generating drift faster than they clear it - stop, report what the last pass found, and say plainly that the set has not converged rather than looping on.
 
 ---
 
