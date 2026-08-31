@@ -5,7 +5,7 @@
 # Local IDE / Claude Code state
 .claude/settings.local.json
 
-# Work report (work-report skill) — git add -f to commit it
+# Work report (work-report skill) - git add -f to commit it
 /WORK-REPORT.md
 
 # Snyk Agent Scan local outputs

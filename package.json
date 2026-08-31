@@ -3,7 +3,8 @@
   "description": "A collection of Claude skills for developer documentation and workflow tasks.",
   "private": true,
   "scripts": {
-    "install:skills": "npx skills experimental_install"
+    "install:skills": "npx skills experimental_install",
+    "snyk": "node --env-file=.env -e \"process.exitCode=require('child_process').spawnSync('uvx',['snyk-agent-scan@latest','--skills','./skills'],{stdio:'inherit'}).status??1\""
   },
   "repository": {
     "type": "git",
