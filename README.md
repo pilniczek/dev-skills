@@ -8,6 +8,10 @@ A collection of [Claude](https://claude.com/claude-code) skills for developer do
 
 Audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, templates, manifests, changelogs, installers) for cross-file drift.
 
+### [subtract-first](skills/subtract-first/README.md)
+
+Forces the subtractive option to be considered before code is added: three searches (reuse, extend, subtract) run at implementation time, before a new file, abstraction or dependency appears.
+
 ### [work-report](skills/work-report/README.md)
 
 Writes `WORK-REPORT.md`, a standardized self-report of a session's work that a reviewer or a later session reads instead of re-deriving intent from the diff.
