@@ -61,5 +61,6 @@ Adopting versions later means adopting the automation that guarantees the bump: 
 ## Per-skill guidance
 
 - [docs-consistency-check](skills/docs-consistency-check/AGENTS.md)
+- [merge-reviews](skills/merge-reviews/AGENTS.md)
 - [subtract-first](skills/subtract-first/AGENTS.md)
 - [work-report](skills/work-report/AGENTS.md)

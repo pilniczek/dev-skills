@@ -8,6 +8,10 @@ A collection of [Claude](https://claude.com/claude-code) skills for developer do
 
 Audits the prose layer of a project (READMEs, SKILL.md, CLAUDE.md, AGENTS.md, templates, manifests, changelogs, installers) for cross-file drift and content restated where it should be referenced.
 
+### [merge-reviews](skills/merge-reviews/README.md)
+
+Merges two independent reviews of the same change - or wraps a single one - into one urgency-ordered list of blockers, separating real defects from shape opinions and from deliberate scope.
+
 ### [subtract-first](skills/subtract-first/README.md)
 
 Forces the subtractive option to be considered before code is added: three searches (reuse, extend, subtract) run at implementation time, before a new file, abstraction or dependency appears.
