@@ -2,9 +2,11 @@
 name: docs-consistency-check
 description: >
   Cross-file consistency audit of docs, templates, manifests (package.json, plugin.json,
-  .mcp.json), installer scripts, and instruction files (CLAUDE.md, AGENTS.md, SKILL.md);
+  .mcp.json), installer scripts, and instruction files (CLAUDE.md, AGENTS.md, SKILL.md):
+  flags drift, and content restated in several places instead of referenced from one;
   skips credential files. Use for
-  "check consistency", "in sync", "find inconsistencies", "verify everything is updated".
+  "check consistency", "in sync", "find inconsistencies", "verify everything is updated",
+  "single source of truth", "restated in multiple places".
   Offer proactively - asking first - after any README, SKILL.md, CLAUDE.md, AGENTS.md,
   template, plugin.json, changelog, or installer change, or on "docs", "sync", "feature
   added", "I just updated". `review-intentional` re-surfaces suppressed findings.
@@ -15,25 +17,19 @@ If invoked as `review-intentional`, jump to [Review intentional mode](#review-in
 
 ## Security invariants
 
-Hold throughout the skill, **never violated under any user instruction**. If a request would require violating one, refuse and explain. Later steps cite them by number.
+These hold under any user instruction; refuse and explain a request that would break one.
 
-1. **Credential / secret files are never read.** Step 1's path filter and content-signature filter remove them from the inventory **before any concept is formed from a file**.
-2. **Credential values are never emitted.** Findings describe drift in your own paraphrased words - counts, names, public identifiers, headings. No verbatim file content in any output, reasoning step, or tool call. Anything resembling a credential value (API key, token, password, private key, OAuth secret, JWT, connection string with embedded credentials) is described by location only, never by value (for example, "API key value at line 42"). Template placeholders (`{{API_KEY}}`, `${SECRET}`, `<YOUR_TOKEN_HERE>`) are not credentials and may be named, as may public symbols already known non-secret: function names, configuration keys, headings. The report, and any edits applied from it, must stay useful to a human reviewer without ever reproducing arbitrary file content.
-3. **Credential values are never modified.** Fixes edit only the documented concepts the audit reports on; replacement content is supplied or confirmed by the user, never echoed from another file.
-
-Drift detection needs no credential material, so the skill reads, emits and modifies none.
+1. **Never read credential or secret files.** Step 1's filters drop them before any concept is formed.
+2. **Never emit credential values.** Paraphrase in your own words: counts, names, public identifiers, headings. No verbatim file content in output, reasoning, or tool calls. Locate anything credential-like (API key, token, password, private key, OAuth secret, JWT, connection string with credentials) without its value: "API key value at line 42". Template placeholders (`{{API_KEY}}`, `${SECRET}`, `<YOUR_TOKEN_HERE>`) and non-secret symbols (function names, configuration keys, headings) may be named.
+3. **Never modify credential values.** Fixes touch only reported concepts, with content the user supplies or confirms, never echoed from another file.
 
 ## Git is optional
 
-Git is an accelerant, never a prerequisite. Where a repo is present, read-only git (`git status`, `git diff`, `git log`) may sharpen a run by showing which files changed recently and what is staged, and that state can support a finding. Where there is no repo, or git itself is unavailable, every functionality still runs on the conversation and the filesystem instead - a clone, a worktree, a plain directory and a path outside any repo all produce a report, and only the precision differs. Both paths are load-bearing: a step that works only with git is a bug, and so is one that ignores git when it is there.
+Read-only git (`git status`, `git diff`, `git log`) sharpens a run where present: recent and staged changes point at drift and can support a finding. Without git, every step runs on the conversation and the filesystem at lower precision. A step that needs git is a bug; so is one that ignores git when present.
 
-Git-shaped strings in the steps below need no repo either: Step 1 drops a `.git/` directory by name the way it drops any build artifact, reads `.docs-consistency-check-ignore` in `.gitignore` pattern syntax, and the re-audit triggers under [Stay armed](#stay-armed-for-the-rest-of-the-session) are phrases a user types.
+## Step 1 - Apply security guards, then identify the file set
 
-## Step 1 — Apply security guards, then identify the file set
-
-If `.docs-consistency-check-ignore` doesn't exist at the project root, offer to create it with the template below and wait for a go-ahead before writing. If it exists, apply its patterns silently.
-
-**Default template:**
+No `.docs-consistency-check-ignore` at the project root: offer to create it from this template, wait for a go-ahead. Present: apply it silently.
 
 ```
 # docs-consistency-check ignore file
@@ -47,81 +43,69 @@ If `.docs-consistency-check-ignore` doesn't exist at the project root, offer to 
 # build/
 ```
 
-**Path filter - applied first, before any file is read** (invariant 1). Drop `node_modules/`, `.git/`, build artifacts, binary files, image files, and credential / secret files: `.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_ed25519`, `id_ecdsa`, `secrets.json`, `credentials.json`, `.netrc`, `.npmrc`, `.htpasswd`. Plus anything matching `.docs-consistency-check-ignore` (`.gitignore` syntax). Drift in those files is out of scope.
+**Path filter, before any read** (invariant 1). Drop `node_modules/`, `.git/`, build artifacts, binary and image files, credential files (`.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_ed25519`, `id_ecdsa`, `secrets.json`, `credentials.json`, `.netrc`, `.npmrc`, `.htpasswd`), and matches of `.docs-consistency-check-ignore` (`.gitignore` syntax).
 
-**Content-signature filter - applied second, before any concept is formed.** Scan the first ~2 KB of every file surviving the path filter for credential signatures:
+**Content-signature filter, before any concept is formed.** Scan the first ~2 KB of each remaining file for:
 
-- PEM headers — `-----BEGIN [A-Z ]*PRIVATE KEY-----`, `-----BEGIN OPENSSH PRIVATE KEY-----`
+- PEM headers - `-----BEGIN [A-Z ]*PRIVATE KEY-----`, `-----BEGIN OPENSSH PRIVATE KEY-----`
 - Assignments shaped like `(api[_-]?key|secret|token|password|access[_-]?key|client[_-]?secret|bearer)\s*[:=]\s*["']?[A-Za-z0-9_+/=-]{16,}` (case-insensitive)
-- Vendor-prefixed tokens, which identify themselves: `sk-`, `sk_live_`, `rk_live_`, `ghp_`, `gho_`, `github_pat_`, `glpat-`, `xoxb-`, `xoxp-`, `AKIA`, `ASIA`, `AIza`, `ya29.`, `npm_`, `dop_v1_`, followed by ≥ 16 of `[A-Za-z0-9_-]`; plus JWTs, `eyJ` then two more dot-separated base64url segments
-- Credential-carrying URLs: connection strings `(postgres|postgresql|mysql|mongodb|redis|amqp)://[^:\s]+:[^@\s]+@`, and query parameters named `(access_)?token`, `api[_-]?key`, `secret`, `password` with a value ≥ 16 chars
+- Vendor-prefixed tokens: `sk-`, `sk_live_`, `rk_live_`, `ghp_`, `gho_`, `github_pat_`, `glpat-`, `xoxb-`, `xoxp-`, `AKIA`, `ASIA`, `AIza`, `ya29.`, `npm_`, `dop_v1_`, followed by ≥ 16 of `[A-Za-z0-9_-]`; JWTs (`eyJ` plus two dot-separated base64url segments)
+- Connection strings `(postgres|postgresql|mysql|mongodb|redis|amqp)://[^:\s]+:[^@\s]+@`; query parameters `(access_)?token`, `api[_-]?key`, `secret`, `password` with a value ≥ 16 chars
 - `Authorization:` or `Proxy-Authorization:` header values
 
-Length alone is never a match: a high-entropy string counts only when one of the signals above applies to it. These never trigger the filter, whatever their entropy - URLs and their path segments, UUIDs, content hashes and git object ids, hyphen- or underscore-separated word slugs, `data:` URIs, template placeholders.
+Entropy or length alone never matches. Never matches: URLs and path segments, UUIDs, content hashes and git object ids, hyphen- or underscore-separated slugs, `data:` URIs, template placeholders.
 
-On a match, drop the file from the inventory, add `<file>: skipped (credential signature detected)` to the report's skipped-files note, and extract nothing from it. Never echo the matched value or its surrounding line (invariant 2).
+On a match: drop the file, extract nothing, add `<file>: skipped (credential signature detected)` to the skipped-files note. Never echo the value or its line.
 
-**Inventory - only files passing BOTH filters are eligible.** Within that bounded set, collect under the project root:
+**Inventory**, from files passing both filters:
 
-- Markdown files: `README.md`, `CLAUDE.md`, `AGENTS.md`, `SKILL.md`, other `.md`
-- Template files: anything with `{{VARIABLE}}` or `[INCLUDE IF: ...]` syntax
-- Manifest files: `plugin.json`, `.mcp.json`, `package.json`, and similar
-- Installer and setup scripts: the shell, batch or task-runner files a project's install or bootstrap steps live in
-- Any file explicitly mentioned in the conversation (still subject to both filters)
+- Markdown: `README.md`, `CLAUDE.md`, `AGENTS.md`, `SKILL.md`, other `.md`
+- Templates: `{{VARIABLE}}` or `[INCLUDE IF: ...]` syntax
+- Manifests: `plugin.json`, `.mcp.json`, `package.json`, and similar
+- Installer and setup scripts (shell, batch, task-runner)
+- Any file named in the conversation
 
-From each, extract only the concepts and drift signals you need - counts, names, headings, identifiers - per invariant 2. The ignore list bounds the set, so no recursive expansion.
+Extract only drift signals (counts, names, headings, identifiers); no recursive expansion. A mid-run exclusion ("ignore vendor/ for this") lasts one run; persisting it is the user's call.
 
-**Mid-run exclusions:** "ignore vendor/ for this" applies to the current run only. Persistence is the user's call.
+## Step 2 - Load intentional variations
 
----
+Read `intentional-variations.md` at the project root if present. Each entry holds files, what differs, why, and when marked. Step 6 silently skips a finding matching an entry (same files, similar description).
 
-## Step 2 — Load intentional variations
+## Step 3 - Count heuristic (fast first pass)
 
-Read `intentional-variations.md` from the project root if it exists, and build a lookup of suppressed items - each entry records the affected files, what differs, why it's intentional, and when it was marked. A finding matching a suppressed entry (same files, semantically similar description) is silently skipped during reporting. No file means an empty suppressions list.
+**Declared invariants first**, the highest-yield source. Instruction files (`AGENTS.md`, `CLAUDE.md`, per-component equivalents) state assertions naming their own files: "the tier strings appear verbatim in SKILL.md and README.md", "the 7 step headings". Enumerate every one; a stale one is drift by definition. Verify each on:
 
----
+- **Count** - stated number against actual.
+- **Membership** - every named item exists; nothing unnamed has joined.
+- **Location** - every named file still carries the item.
 
-## Step 3 — Count heuristic (fast first pass)
+**Then the generic count pass**, for lists no declaration covers: count items in any list that looks exhaustive (sources, features, icons, steps, conditions). A cross-file mismatch is a candidate finding for Step 5.
 
-**Declared invariants first.** Instruction files (`AGENTS.md`, `CLAUDE.md`, and any per-component equivalent) state their own invariants: "the tier strings appear verbatim in SKILL.md and README.md", "the 7 step headings", "five sections, in that order", "these four pins apply to every skill". Every such sentence is a checkable assertion that names its own files. Enumerate all of them, then verify each against the files it names. In a repo carrying instruction files this is the highest-yield source there is, because the assertions are exhaustive by construction and a stale one is drift by definition.
+## Step 4 - Build the concept inventory
 
-Verify each declaration on three axes:
+A concept is anything in more than one place, across files or within one, that could drift. Vocabulary from `CLAUDE.md` and `AGENTS.md` comes first and outranks this fallback taxonomy:
 
-- **Count** - the stated number against the actual number.
-- **Membership** - every named item still exists, and nothing unnamed has joined the set.
-- **Location** - every file the declaration names still carries the item.
-
-**Then the generic count pass**, for repos with no instruction files and for lists no declaration covers: count items in any list that looks exhaustive - sources, features, icons, steps, conditions. Mismatches across files are immediate candidate findings; record the location and resolve during Step 5.
-
----
-
-## Step 4 — Build the concept inventory
-
-A "concept" is anything appearing in more than one file that could drift. **Start from instruction files** - `CLAUDE.md` and `AGENTS.md` define project vocabulary, and their concepts outrank the fallback taxonomy below.
-
-**Fallback taxonomy:**
-
-- **Features / sources** - what the system supports; usually in installer/spec, template, and docs.
-- **Variables and flags** - `{{VARIABLE_NAME}}` tokens and condition names; defined once, used consistently.
+- **Features / sources** - what the system supports (installer/spec, template, docs).
+- **Variables and flags** - `{{VARIABLE_NAME}}` tokens and condition names.
 - **Icons and symbols** - emoji or markers tied to concepts (📧, 📅, ⭐).
-- **Conditional blocks** - `[INCLUDE IF: condition]...[/INCLUDE]`; conditions in blocks must match the conditions list.
-- **Terminology** - same concept, same name everywhere.
-- **Exhaustive lists** - anything enumerating "all of X". Step 3's count mismatches belong here.
-- **Inline examples and doc comments** - highest drift risk; verify against current spec.
+- **Conditional blocks** - `[INCLUDE IF: condition]...[/INCLUDE]` conditions must match the conditions list.
+- **Terminology** - one concept, one name.
+- **Exhaustive lists** - anything enumerating "all of X", including Step 3 mismatches.
+- **Inline examples and doc comments** - highest drift risk; check against the current spec.
 
-Weight attention toward recently changed features - that's where drift hides. With git available, read the recent and staged changes to find them; without it, use the files this session edited or named in the conversation. With neither signal, weight every concept equally.
+Weight attention toward recent changes, where drift hides: git's recent and staged changes, else files this session edited or named, else equally.
 
----
+**Tag restatements**: concepts kept in two or more places as a full enumeration of the same set, or a definition or rule matching word for word.
 
-## Step 5 — Cross-reference and classify
+## Step 5 - Cross-reference and classify
 
-For each concept, check whether every file mentions it consistently. Classify each finding:
+Check each concept is consistent everywhere it appears. Classify each finding:
 
 ### 🔴 Conflict
-Two or more files assert different values for the same fact. A human must decide.
+Places assert different values for one fact. A human must decide.
 
 ### ⚠️ Outdated
-One file was updated, another didn't catch up - the source of truth is clear.
+One place was updated, another wasn't; the source of truth is clear.
 
 ### ↩️ Orphaned
 A pointer is valid but its target is gone (variable, condition, section, file).
@@ -129,69 +113,75 @@ A pointer is valid but its target is gone (variable, condition, section, file).
 ### ❓ Unverifiable
 A difference exists but context is too thin to call it a problem.
 
-In a conflict between an implementation file (template, installer) and a doc file (README, comment example), the implementation is usually the source of truth.
+### 🔁 Restated
+Copies agree today, but one could reference the other. Each copy is a place the next edit can miss.
 
-**Admissibility of ❓.** A ❓ needs three things: a named file pair, a named concept, and the declaration or instruction-file rule that requires those files to agree on it. Missing the third, it is an observation rather than a finding and stays out of the report. These are never findings:
+Implementation (template, installer) usually outranks docs (README, comment example) as source of truth.
 
-- wrap width, heading style, section ordering
-- an optional section present in one artifact and absent in another
-- the wording of a sentence no declaration covers
-- parallel structure between sibling components, unless a declaration requires it
+**Admissibility of ❓.** Needs a named pair of places, a named concept, and the declaration or instruction-file rule requiring them to agree. Without the rule it is an observation and stays out. Never findings: wrap width, heading style, section ordering; an optional section present in one artifact only; wording no declaration covers; parallel structure between siblings unless a declaration requires it. N siblings admit N-squared shape differences, so a tier accepting them never reports clean.
 
-A set of N sibling components admits N-squared shape differences, so a tier that accepts them can never report clean. Symmetry is a contract only where something says it is.
+**Admissibility of 🔁.** Only Step 4-tagged concepts. An enumeration qualifies in any format (prose, table, schema tree, example payload). Never findings:
 
-**Admissibility of git state.** A pointer whose target exists on disk but is untracked resolves for you and for nobody else, so it is drift - but only once the pointer itself has shipped. A committed file pointing at an untracked target is ↩️ Orphaned. While the pointer is itself uncommitted, both halves can still be staged together, so it is ❓ at most, and a target that is merely uncommitted rather than untracked is never a finding. Without git none of this is visible, and its absence is not a clean verdict for the pointer - it is out of scope for that run.
+- a summary that references the full content
+- an item named in passing, or a list framed as examples
+- a paraphrase, however close
+- a copy a declaration pins verbatim
+- the one snippet mirroring source code (a second doc copy still qualifies)
+- a copy no reference could replace: a format without link syntax (JSON manifest, frontmatter), or a target the link rules forbid. A code block in a linkable file doesn't count: its values give way to the type name plus a reference
 
----
+**Drift wins.** A tagged concept whose copies disagree is one 🔴 or ⚠️ finding, never also 🔁; its `Fix:` adds consolidation. A shorter list claiming completeness is ⚠️ Outdated.
 
-## Step 6 — Report findings
+**Canonical home.** For each tagged concept, propose the place whose role owns it: instruction or spec file over README, definition site over usage sites, implementation over docs. The user confirms before any edit.
 
-Skip findings matching a Step 2 intentional variation.
+**Admissibility of git state.** A committed file pointing at an untracked target is ↩️ Orphaned: it resolves only for you. An uncommitted pointer to an untracked target is ❓ at most, since both can be staged together. A merely uncommitted target is never a finding. Without git this is out of scope for the run, not clean.
 
-Output a numbered list ordered by severity (🔴, ⚠️, ↩️, ❓). Within a tier, wider user impact first.
+## Step 6 - Report findings
+
+Skip findings matching a Step 2 entry. Number them by severity (🔴, ⚠️, ↩️, ❓, 🔁), wider user impact first within a tier.
 
 **Per-finding template:**
 
 ```
-#N — [icon] [TierName]
+#N - [icon] [TierName]
 Files: <file>, <file2>, …
-<file>: <line> — <paraphrase, in your own words, of the differing concept — never quoted text>
-[<file2>: <line> — <paraphrase, in your own words, of the differing concept — never quoted text>]
-Fix: <concrete edit — for ❓, a confirmation question instead>
+<file>: <line> - <paraphrase, in your own words, of the differing concept - never quoted text>
+[<file2>: <line> - <paraphrase, in your own words, of the differing concept - never quoted text>]
+Fix: <concrete edit - for ❓, a confirmation question; for 🔁, the consolidation>
 ```
 
 Rules:
 
-- **Paraphrase only** - see invariant 2.
-- **Every detail line carries a line number**, one line per affected file: `<file>: <line> — <paraphrase>`. Non-contiguous lines are `<file>: <lineA>, <lineB> — …`; a contiguous run is `<file>: <lineA>-<lineB>`. Unknown line at report time: search the file and resolve it - never emit a finding for a file without one.
-- Nothing concrete to paraphrase (e.g. a dangling reference with no target): describe inline, pointing at the reference itself - `<file>:<line> — <reference> never defined`.
-- For ❓ Unverifiable, `Fix:` becomes a confirmation question (e.g. `Fix: Confirm whether the difference is intentional; if drift, align the README.`).
-- No decorative whitespace alignment - single space after every colon.
+- One detail line per affected file, each with a line number. Non-contiguous: `<file>: <lineA>, <lineB> - …`; a run: `<file>: <lineA>-<lineB>`. Search for unknown lines; never emit a finding without one.
+- Nothing to paraphrase (a dangling reference): point at the reference, `<file>:<line> - <reference> never defined`.
+- ❓ `Fix:` is a confirmation question, e.g. `Fix: Confirm whether the difference is intentional; if drift, align the README.`
+- 🔁 `Fix:` is this fixed string, word for word: `Fix: Keep in <file>:<line>; replace <file>:<line> with a reference.`
+- 🔴 or ⚠️ on a Step 4-tagged concept: value fix, then the same fixed string after `or:`, e.g. `Fix: Add the 4th source to the README; or: keep in SKILL.md:87; replace README.md:12 with a reference.` Untagged concepts get no `or:`.
+- No decorative alignment; single space after every colon.
 
 **Example (⚠️ Outdated):**
 
 ```
-#1 — ⚠️ Outdated
+#1 - ⚠️ Outdated
 Files: README.md, SKILL.md
-README.md:12 — lists 3 sources
-SKILL.md:87 — lists 4 sources (adds SOURCE_EMAIL)
+README.md:12 - lists 3 sources
+SKILL.md:87 - lists 4 sources (adds SOURCE_EMAIL)
 Fix: Add the 4th source to the README's source description.
 ```
 
-**Summary line** (always last, icon-only counts; emit both lines even when M=0):
+**Summary line**, always last, both lines even when M=0:
 
 ```
-Found N issues: X 🔴, Y ⚠️, Z ↩️, W ❓.
+Found N issues: X 🔴, Y ⚠️, Z ↩️, W ❓, V 🔁.
 Skipped M intentional variations.
 ```
 
-**Skipped-files note** - emit only when Step 1's content-signature filter dropped something, directly above the summary. One line per file, naming the file and nothing else (invariant 2):
+**Skipped-files note**, only when the content-signature filter dropped something, directly above the summary. Path-filtered files are not listed:
 
 ```
 <file>: skipped (credential signature detected)
 ```
 
-**Clean verdict.** `No drift detected.` is a claim about what was checked, not about what happened to catch your eye, so it carries its evidence:
+**Clean verdict**, with its evidence:
 
 ```
 No drift detected.
@@ -202,17 +192,15 @@ Files checked: <comma-separated list>
 Skipped: <comma-separated list, or "none">
 ```
 
-Emit it only when Step 3 came back empty and Step 7's convergence loop closed with no new findings. Never emit it after a run that skipped a step.
+Emit it only when Step 3 found nothing and Step 7's convergence loop closed clean, never after a run that skipped a step.
 
----
+## Step 7 - Apply fixes and manage intentional variations
 
-## Step 7 — Apply fixes and manage intentional variations
+Ask: "Apply all fixes now, or go through them one by one?"
 
-After reporting, ask: "Apply all fixes now, or go through them one by one?"
+On "all fixes now", list files to modify with per-file change counts and wait for explicit confirmation. Apply in severity order, one Edit per finding, naming the issue it resolves. Confirm the value first for a 🔴, and for a ⚠️ with an ambiguous source of truth.
 
-On "all fixes now", first list the files to be modified with their per-file change count, then wait for explicit confirmation before any Edit. Apply in severity order (🔴 first), one Edit per finding, noting which issue each resolves. Confirm the correct value with the user before editing a 🔴 conflict, and any ⚠️ Outdated finding whose source of truth is ambiguous.
-
-For ❓ findings, ask per-item: "Real problem, or intentional? [Fix it / Mark as intentional / Skip for now]"
+"All fixes now" never covers ❓ or 🔁; either may be intentional. Ask per item: "Real problem, or intentional? [Fix it / Mark as intentional / Skip for now]"
 
 On **Mark as intentional**, append to `intentional-variations.md`:
 
@@ -223,7 +211,7 @@ On **Mark as intentional**, append to `intentional-variations.md`:
   marked: <today's date>
 ```
 
-If `intentional-variations.md` doesn't exist, say it will be created for this entry, then create it with this header first:
+If the file doesn't exist, say so, then create it with this header:
 
 ```markdown
 # Intentional Variations
@@ -232,9 +220,7 @@ If `intentional-variations.md` doesn't exist, say it will be created for this en
 
 ### Discharge each fix's own obligations
 
-A fix that resolves drift usually *adds contract surface*: a heading, a declared invariant, a fixed string the tool emits, a taxonomy entry. Each addition creates obligations in files the edit never touched, and an audit that stops at the edit hands those obligations to the next run as fresh findings. No fix is complete until they are discharged in the same run.
-
-Match every edit against this table and check what it implies:
+A fix often adds contract surface (a heading, a declared invariant, an emitted string, a taxonomy entry) that creates obligations in untouched files. Discharge them in the same run, or the next run finds them. Check every edit:
 
 | Edit shape | Also check |
 | ---------- | ---------- |
@@ -244,16 +230,13 @@ Match every edit against this table and check what it implies:
 | Added an inventory or taxonomy entry | the spec's own scope clause; every public description of scope |
 | Changed a contract sentence | every restatement of that sentence in the set |
 | Fixed one of several sibling components | the same concept in every sibling |
+| Replaced a restated copy with a reference | every anchor into the removed copy; every declaration naming the copy's location |
 
-The last row bites hardest: fixing one sibling and leaving the others converts one finding into as many findings as there are siblings.
+Fixing one sibling and not the others turns one finding into one per sibling.
 
 ### Converge before reporting done
 
-After the last edit, re-run Step 3 and a Step 5 pass scoped to the touched files and their contract pairs. New findings mean more fixes: apply them, discharge their obligations, scope again. Repeat until a pass comes back empty, then emit Step 6's clean verdict.
-
-Cap the loop at three iterations. Still finding drift on the fourth pass means the fixes are generating drift faster than they clear it - stop, report what the last pass found, and say plainly that the set has not converged rather than looping on.
-
----
+After the last edit, re-run Step 3 and Step 5 scoped to touched files and their contract pairs. Fix new findings, discharge their obligations, repeat until a pass is empty, then emit the clean verdict. Cap at three iterations: drift on a fourth pass means fixes create drift faster than they clear it, so stop, report the last pass, and say the set has not converged.
 
 ## Review intentional mode
 
@@ -263,24 +246,20 @@ When invoked as `docs-consistency-check review-intentional`:
 2. Display each entry numbered:
 
 ```
-#1 — Marked intentional on 2026-05-03
+#1 - Marked intentional on 2026-05-03
 Files: README.md, SKILL.md
 What: "README says 3 sources, SKILL.md defines 4"
 Reason: "README targets non-technical audience, intentionally simplified"
 ```
 
 3. Ask per entry: "Still intentional, or re-open as a finding?"
-4. Remove re-opened entries and run a targeted check on those files immediately.
+4. Remove re-opened entries and check those files immediately.
 5. Keep confirmed entries.
-
----
 
 ## Stay armed for the rest of the session
 
-A finished audit cycle doesn't end this skill's responsibility. For the rest of the conversation, offer a focused re-audit whenever:
+Until the conversation ends, offer a re-audit scoped to changed files and their contract pairs whenever:
 
-- ≥2 audit-set files are edited (by user or by Claude on the user's behalf)
-- A file is structurally rewritten or has a section removed
+- ≥2 audit-set files are edited (by the user or on their behalf)
+- A file is structurally rewritten or loses a section
 - The user signals "done" / "ready to commit" / "looks good"
-
-Scope the re-audit to the changed files and their contract pairs - full re-audits are rarely needed.
