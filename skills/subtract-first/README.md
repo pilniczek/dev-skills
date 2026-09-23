@@ -2,7 +2,11 @@
 
 A Claude skill that makes the subtractive option get considered before code is added. It runs at implementation time, not afterwards: before a new file, component, hook, abstraction, config flag or dependency appears, and again mid-change when a change has grown past what was predicted.
 
-It corrects a measured cognitive bias, not a style preference: people default to searching for additive changes and overlook subtractive ones, worse under cognitive load, and the correction that works is being asked. The subtractive option is not weighed and rejected, it is never generated. The experiments, the replication and the figures are in [Why this exists in SKILL.md](SKILL.md#why-this-exists).
+## Why this exists
+
+It corrects a measured cognitive bias, not a style preference. [Adams et al., Nature 592:258-261 (2021)](https://doi.org/10.1038/s41586-021-03380-y) ran eight experiments and found people "systematically default to searching for additive changes, and consequently overlook subtractive transformations", worse under cognitive load. Subtractive options are not weighed and rejected, they are never generated - and a developer mid-task under deadline is exactly the loaded condition.
+
+A [preregistered replication](https://doi.org/10.1002/jocb.1535) (N = 477) reproduced it - 1155 additive ideas against 297 subtractive - and showed a plain verbal cue raises the share of people generating at least one subtractive idea (OR = 2.52). The intervention is being asked, and this skill is that ask, while it still changes the code. The same numbers set its calibration: even cued, additive won most of the time.
 
 ## Install
 
@@ -35,7 +39,7 @@ On a new named thing or a new layer: a file, module, component, hook, exported s
 
 `/simplify` and the code review skills work on code that exists. This one works on code that does not exist yet, where the cheapest subtraction is the one that stops it being written. Running both on the same change duplicates the work.
 
-Nor does it license reckless deletion. A proposed removal carries its blast radius - Hyrum's Law, Chesterton's fence, and the measured failure rate of even automated, test-verified removal - so the skill finds the callers first and treats anything exported past the repo boundary as needing your explicit agreement. See [Removal is the permanent cut](SKILL.md#removal-is-the-permanent-cut).
+Nor does it license reckless deletion. A proposed removal carries its blast radius - [Hyrum's Law](https://www.hyrumslaw.com/), Chesterton's fence, and the measured failure rate of even automated, test-verified removal: [coverage-based debloating](https://arxiv.org/abs/2008.08401) stripped 68.3% of library bytecode and 81.5% of client projects still passed their tests, so roughly one client in five broke. So the skill finds the callers first and treats anything exported past the repo boundary as needing your explicit agreement. See [Removal is the permanent cut](SKILL.md#removal-is-the-permanent-cut).
 
 ## Contributing
 

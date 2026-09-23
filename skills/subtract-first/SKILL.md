@@ -12,24 +12,14 @@ allowed-tools: Grep, Glob, Read
 ---
 
 Run the **subtraction gate** before adding code, and again when a change outgrows what you
-expected. Not writing less code as a virtue: the option to *remove* something usually never gets
-generated at all, so it never gets compared against the option to add.
+expected. Not writing less code as a virtue: people default to searching for additive changes, and
+the option to *remove* something usually never gets generated at all, so it never gets compared
+against the option to add. Cognitive load makes it worse, and a developer mid-task under deadline
+is exactly that condition. What corrects it is being asked - this gate is that ask, while it still
+changes the code.
 
-## Why this exists
-
-[Adams et al., Nature 592:258-261 (2021)](https://doi.org/10.1038/s41586-021-03380-y) ran eight
-experiments and found people "systematically default to searching for additive changes, and
-consequently overlook subtractive transformations", worse under cognitive load. Subtractive
-options are not weighed and rejected, they are never generated - and a developer mid-task under
-deadline is exactly the loaded condition.
-
-A [preregistered replication](https://doi.org/10.1002/jocb.1535) (N = 477) reproduced it - 1155
-additive ideas against 297 subtractive - and showed a plain verbal cue raises the share of people
-generating at least one subtractive idea (OR = 2.52). The intervention is being asked. This skill
-is that ask, while it still changes the code.
-
-Calibrate from the same numbers: even cued, additive won most of the time, and often deserves to.
-A gate that always concludes "delete something" is broken the other way.
+Calibrate: even when asked, the additive option wins most of the time, and often deserves to. A
+gate that always concludes "delete something" is broken the other way.
 
 ## When to run it
 
@@ -103,12 +93,8 @@ report records that the trade was looked at, not that one was found.
 
 ## Removal is the permanent cut
 
-The gate proposes removals, it does not authorise reckless ones.
-[Hyrum's Law](https://www.hyrumslaw.com/): with enough users of an API, every observable behaviour
-is depended on by somebody, whatever the contract promises. Chesterton's fence is the same warning
-about your own repo. Even automated, coverage-guided, test-verified removal fails measurably -
-[coverage-based debloating](https://arxiv.org/abs/2008.08401) stripped 68.3% of library bytecode
-and 81.5% of client projects still passed their tests, so roughly one client in five broke.
+The gate proposes removals, it does not authorise reckless ones. Hyrum's Law and Chesterton's
+fence apply: code can be depended on for behaviour its contract never promised.
 
 A proposed removal carries its blast radius. Before deleting, find the callers, say what could
 depend on the behaviour rather than the contract, and treat anything exported past the repo
@@ -117,9 +103,8 @@ boundary as needing the user's explicit agreement. "The tests pass" is not "this
 ## What this is not
 
 Not a cleanup pass over finished code - that is `/simplify` and the code review skills, and
-running both on one change wastes the user's time. The distinguishing question is whether the code
-exists yet. Before it is written, the cheapest subtraction is the one that stops it being written;
-afterwards, deleting it means unpicking whatever grew around it.
+running both on one change wastes the user's time. The distinguishing question is whether the
+code exists yet.
 
 Not a stall either. The gate is three searches and four lines. If it turns into a design
 discussion you have overrun its purpose - state the trade, decide, keep going, let the user
